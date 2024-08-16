@@ -1,0 +1,67 @@
+import tensorflow as tf
+import tensorflow_hub as hub
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+model_url = "https://tfhub.dev/tensorflow/ssd_mobilenet_v2/2"
+detector = hub.load(model_url)
+
+def load_image_into_numpy_array(path):
+    return np.array(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB))
+
+def show_image(image, boxes, classes, scores, category_index, max_boxes=10, min_score_thresh=0.5):
+    for i in range(min(boxes.shape[0], max_boxes)):
+        if scores is None or scores[i] > min_score_thresh:
+            box = tuple(boxes[i].tolist())
+            ymin, xmin, ymax, xmax = box
+            (left, right, top, bottom) = (xmin * image.shape[1], xmax * image.shape[1],
+                                          ymin * image.shape[0], ymax * image.shape[0])
+            color = (255, 0, 0)
+            cv2.rectangle(image, (int(left), int(top)), (int(right), int(bottom)), color, 2)
+            class_name = category_index.get(classes[i], "N/A")
+            cv2.putText(image, f"{class_name}: {scores[i]:.2f}", (int(left), int(top) - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    plt.figure(figsize=(12, 8))
+    plt.imshow(image)
+    plt.axis('off')
+    plt.show()
+
+# Labeling category index
+category_index = {1: 'person', 2: 'bicycle', 3: 'car', 4: 'motorcycle', 5: 'airplane', 6: 'bus',
+                  7: 'train', 8: 'truck', 9: 'boat', 10: 'traffic light', 11: 'fire hydrant',
+                  12: 'stop sign', 13: 'parking meter', 14: 'bench', 15: 'bird', 16: 'cat',
+                  17: 'dog', 18: 'horse', 19: 'sheep', 20: 'cow', 21: 'elephant', 22: 'bear',
+                  23: 'zebra', 24: 'giraffe', 25: 'backpack', 26: 'umbrella', 27: 'handbag',
+                  28: 'tie', 29: 'suitcase', 30: 'frisbee', 31: 'skis', 32: 'snowboard',
+                  33: 'sports ball', 34: 'kite', 35: 'baseball bat', 36: 'baseball glove',
+                  37: 'skateboard', 38: 'surfboard', 39: 'tennis racket', 40: 'bottle',
+                  41: 'wine glass', 42: 'cup', 43: 'fork', 44: 'knife', 45: 'spoon',
+                  46: 'bowl', 47: 'banana', 48: 'apple', 49: 'sandwich', 50: 'orange',
+                  51: 'broccoli', 52: 'carrot', 53: 'hot dog', 54: 'pizza', 55: 'donut',
+                  56: 'cake', 57: 'chair', 58: 'couch', 59: 'potted plant', 60: 'bed',
+                  61: 'dining table', 62: 'toilet', 63: 'tv', 64: 'laptop', 65: 'mouse',
+                  66: 'remote', 67: 'keyboard', 68: 'cell phone', 69: 'microwave',
+                  70: 'oven', 71: 'toaster', 72: 'sink', 73: 'refrigerator', 74: 'book',
+                  75: 'clock', 76: 'vase', 77: 'scissors', 78: 'teddy bear', 79: 'hair drier',
+                  80: 'toothbrush'}
+
+# Loading a picture
+image_path = "Desktop/Images/im2.jpg"
+image_np = load_image_into_numpy_array(image_path)
+
+# Convert the image into a tensor
+input_tensor = tf.convert_to_tensor(image_np)
+input_tensor = input_tensor[tf.newaxis, ...]
+
+
+results = detector(input_tensor)
+
+# Display the final results
+boxes = results["detection_boxes"][0].numpy()
+classes = results["detection_classes"][0].numpy().astype(np.int32)
+scores = results["detection_scores"][0].numpy()
+
+
+show_image(image_np, boxes, classes, scores, category_index)
